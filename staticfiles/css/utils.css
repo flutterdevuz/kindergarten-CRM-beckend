@@ -1,0 +1,241 @@
+/* =====================================================
+   Kindergarten CRM - Animations & Utilities CSS
+   ===================================================== */
+
+/* ── SCROLL REVEAL ANIMATIONS ── */
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.7s ease, transform 0.7s ease;
+}
+
+.reveal.revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.reveal-delay-1 { transition-delay: 0.1s; }
+.reveal-delay-2 { transition-delay: 0.2s; }
+.reveal-delay-3 { transition-delay: 0.3s; }
+.reveal-delay-4 { transition-delay: 0.4s; }
+
+/* ── LOADER SPINNER ── */
+.spinner {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border: 2.5px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── PROGRESS BAR ── */
+.form-progress {
+  height: 3px;
+  background: var(--glass-border);
+  border-radius: 10px;
+  margin-bottom: 28px;
+  overflow: hidden;
+}
+
+.form-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
+  border-radius: 10px;
+  transition: width 0.4s ease;
+  width: 33.33%;
+}
+
+/* ── FLOATING LABEL HELPER ── */
+.input-count {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+/* ── PHONE INPUT SPECIAL ── */
+.phone-input-wrap {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  gap: 8px;
+}
+
+.phone-prefix {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1.5px solid var(--glass-border);
+  border-radius: var(--border-radius-sm);
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  font-weight: 600;
+  cursor: default;
+  user-select: none;
+}
+
+/* ── UPLOAD ZONE ── */
+.upload-zone {
+  border: 2px dashed var(--glass-border);
+  border-radius: var(--border-radius-sm);
+  padding: 28px;
+  text-align: center;
+  cursor: pointer;
+  transition: var(--transition);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.upload-zone:hover,
+.upload-zone.drag-over {
+  border-color: var(--primary);
+  background: rgba(108, 99, 255, 0.06);
+}
+
+.upload-zone-icon {
+  font-size: 32px;
+  display: block;
+  margin-bottom: 10px;
+}
+
+.upload-zone-text {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.upload-zone-text strong {
+  color: var(--primary-light);
+  display: block;
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+.upload-zone input[type="file"] {
+  display: none;
+}
+
+/* ── CHECKBOX CUSTOM ── */
+.checkbox-wrap {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  cursor: pointer;
+  margin-top: 8px;
+}
+
+.checkbox-wrap input[type="checkbox"] {
+  display: none;
+}
+
+.checkbox-box {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--glass-border);
+  border-radius: 5px;
+  flex-shrink: 0;
+  margin-top: 1px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+  background: transparent;
+}
+
+.checkbox-wrap input[type="checkbox"]:checked + .checkbox-box {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.checkbox-wrap input[type="checkbox"]:checked + .checkbox-box::after {
+  content: '✓';
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.checkbox-label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.checkbox-label a {
+  color: var(--primary-light);
+  text-decoration: none;
+}
+
+.checkbox-label a:hover {
+  text-decoration: underline;
+}
+
+/* ── COUNTER ANIMATION ── */
+.count-up {
+  display: inline-block;
+}
+
+/* ── SECTION DIVIDER ── */
+.section-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--glass-border), transparent);
+  margin: 0 60px;
+}
+
+/* ── PASSWORD STRENGTH ── */
+.pw-strength {
+  margin-top: 8px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+}
+
+.pw-strength-bar {
+  height: 3px;
+  background: var(--glass-border);
+  border-radius: 2px;
+  transition: var(--transition);
+}
+
+.pw-strength-bar.weak { background: var(--error); }
+.pw-strength-bar.fair { background: var(--warning); }
+.pw-strength-bar.good { background: var(--accent); }
+.pw-strength-bar.strong { background: var(--success); }
+
+/* ── INFO TOOLTIP ── */
+.info-tooltip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  cursor: help;
+  margin-left: 6px;
+  position: relative;
+}
+
+.info-tooltip:hover::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1a1f35;
+  border: 1px solid var(--glass-border);
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  padding: 6px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+  z-index: 10;
+}
