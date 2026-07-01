@@ -1,0 +1,210 @@
+{% extends 'panel/base.html' %}
+{% block title %}Bolalar{% endblock %}
+{% block navbar_title %}Bolalar Boshqaruvi{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Bolalar</h1>
+    <p>Bog'chadagi barcha bolalar ro'yxati</p>
+  </div>
+  <button class="btn btn-primary" onclick="openChildModal()">
+    + Bola qo'shish
+  </button>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div style="display:flex;gap:10px;">
+      <select id="groupFilter" class="form-select" style="width:200px;" onchange="loadChildren()">
+        <option value="">Barcha guruhlar</option>
+      </select>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table id="childrenTable">
+      <thead>
+        <tr>
+          <th>Rasm</th>
+          <th>Ism Familiya</th>
+          <th>Tug'ilgan kun</th>
+          <th>Guruh</th>
+          <th>Amallar</th>
+        </tr>
+      </thead>
+      <tbody id="childrenBody">
+        <tr><td colspan="5" class="text-center"><div class="page-loader"><span class="spinner"></span></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="childModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Bola ma'lumotlari</h3>
+      <button class="modal-close" onclick="Panel.closeModal('childModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form id="childForm">
+        <input type="hidden" id="c_id">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Ism</label>
+            <input type="text" id="c_first_name" class="form-input" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Familiya</label>
+            <input type="text" id="c_last_name" class="form-input" required>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Tug'ilgan sana</label>
+            <input type="date" id="c_date_of_birth" class="form-input" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Guruh</label>
+            <select id="c_group" class="form-select" required></select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Rasm (ixtiyoriy)</label>
+          <input type="file" id="c_photo" class="form-input" accept="image/*">
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="Panel.closeModal('childModal')">Bekor qilish</button>
+      <button class="btn btn-primary" id="saveChildBtn" onclick="saveChild()">Saqlash</button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+let groupsData = [];
+
+async function initData() {
+  const groupsRes = await Panel.apiGet('/api/kindergarden/groups/');
+  if (groupsRes) {
+    groupsData = groupsRes;
+    const gFilter = document.getElementById('groupFilter');
+    const cGroup = document.getElementById('c_group');
+    const opts = groupsData.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+    gFilter.innerHTML += opts;
+    cGroup.innerHTML = opts;
+  }
+  loadChildren();
+}
+
+async function loadChildren() {
+  const group_id = document.getElementById('groupFilter').value;
+  let url = '/api/kindergarden/children/';
+  if (group_id) url += `?group=${group_id}`;
+  
+  const data = await Panel.apiGet(url);
+  const tbody = document.getElementById('childrenBody');
+  if (!data) return;
+
+  if (data.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center empty-state" style="padding:40px;">Bolalar topilmadi</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = data.map(c => `
+    <tr class="fade-in">
+      <td>
+        <div style="width:40px;height:40px;border-radius:8px;overflow:hidden;background:var(--primary-light);">
+          ${c.image ? `<img src="${c.image}" style="width:100%;height:100%;object-fit:cover;">` : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:1.2rem;">👶</div>'}
+        </div>
+      </td>
+      <td><strong>${c.name || ''} ${c.surname || ''}</strong></td>
+      <td>${c.birth_day ? Panel.formatDate(c.birth_day) : '-'}</td>
+      <td><span class="badge badge-primary">${c.group_name || '-'}</span></td>
+      <td>
+        <button class="btn-icon" title="Tahrirlash" onclick='editChild(${JSON.stringify(c).replace(/'/g, "&apos;")})'>✏️</button>
+        <button class="btn-icon text-error" title="O'chirish" onclick="deleteChild('${c.id}', '${c.name || ''}')">🗑️</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function openChildModal() {
+  document.getElementById('childForm').reset();
+  document.getElementById('c_id').value = '';
+  Panel.openModal('childModal');
+}
+
+function editChild(c) {
+  document.getElementById('c_id').value = c.id;
+  document.getElementById('c_first_name').value = c.name || '';
+  document.getElementById('c_last_name').value = c.surname || '';
+  document.getElementById('c_date_of_birth').value = c.birth_day || '';
+  if(c.group) document.getElementById('c_group').value = typeof c.group === 'object' ? c.group : c.group;
+  Panel.openModal('childModal');
+}
+
+async function saveChild() {
+  const id = document.getElementById('c_id').value;
+  const btn = document.getElementById('saveChildBtn');
+  
+  const formData = new FormData();
+  formData.append('name', document.getElementById('c_first_name').value);
+  formData.append('surname', document.getElementById('c_last_name').value);
+  const bday = document.getElementById('c_date_of_birth').value;
+  if (bday) formData.append('birth_day', bday);
+  const grp = document.getElementById('c_group').value;
+  if (grp) formData.append('group', grp);
+  
+  const photo = document.getElementById('c_photo').files[0];
+  if (photo) formData.append('image', photo);
+
+  btn.disabled = true;
+  btn.textContent = 'Saqlanmoqda...';
+
+  const url = id ? `/api/kindergarden/children/${id}/edit/` : '/api/kindergarden/children/add/';
+  const res = id ? await Panel.apiPatch(url, formData) : await Panel.apiPost(url, formData);
+  
+  btn.disabled = false;
+  btn.textContent = 'Saqlash';
+
+  if (res && res.ok) {
+    if (!id) {
+      // Yangi bola qo'shildi — ota-ona qo'shishga avtomatik o'tish
+      const saved = await res.json().catch(() => ({}));
+      Panel.toast('Bola qo\'shildi! Endi ota-onasini qo\'shing...', 'success');
+      Panel.closeModal('childModal');
+      // Bola ma'lumotini sessionStorage ga yozib, parents sahifasiga o'tamiz
+      sessionStorage.setItem('newChildData', JSON.stringify({
+        child_id: saved.id,
+        child_name: (saved.name || '') + ' ' + (saved.surname || ''),
+        group_id: saved.group || '',
+      }));
+      setTimeout(() => { window.location.href = '/panel/parents/'; }, 700);
+    } else {
+      Panel.toast('Saqlandi', 'success');
+      Panel.closeModal('childModal');
+      loadChildren();
+    }
+  } else if (res) {
+    const err = await res.json().catch(() => ({}));
+    Panel.toast(JSON.stringify(err), 'error');
+  }
+}
+
+async function deleteChild(id, name) {
+  if (!Panel.confirm(`"${name}" ismli bolani o'chirmoqchimisiz?`)) return;
+  const res = await Panel.apiDelete(`/api/kindergarden/children/${id}/delete/`);
+  if (res && res.ok) {
+    Panel.toast('Bola o\'chirildi', 'success');
+    loadChildren();
+  }
+}
+
+initData();
+</script>
+{% endblock %}

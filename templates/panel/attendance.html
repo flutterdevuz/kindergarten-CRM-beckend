@@ -1,0 +1,167 @@
+{% extends 'panel/base.html' %}
+{% block title %}Davomat{% endblock %}
+{% block navbar_title %}Davomat Boshqaruvi{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Davomat</h1>
+    <p>Bolalar davomatini belgilash va kuzatish</p>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom:20px;">
+  <div class="card-body" style="padding:16px 24px;">
+    <div class="attendance-controls">
+      <div style="flex:1;">
+        <label class="form-label">Sana</label>
+        <input type="date" id="attDate" class="attendance-date" onchange="loadAttendance()">
+      </div>
+      <div style="flex:2;">
+        <label class="form-label">Guruh</label>
+        <select id="attGroup" class="form-select" onchange="loadAttendance()">
+          <option value="">Guruh tanlang...</option>
+        </select>
+      </div>
+      <div style="flex:1; display:flex; align-items:flex-end;">
+        <button class="btn btn-primary" style="width:100%;" onclick="saveAttendance()" id="saveAttBtn">
+          Saqlash
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-wrap">
+    <table id="attTable">
+      <thead>
+        <tr>
+          <th>Bola</th>
+          <th>Holat</th>
+          <th>Vaqt (Keldi - Ketdi)</th>
+        </tr>
+      </thead>
+      <tbody id="attBody">
+        <tr><td colspan="3" class="text-center empty-state" style="padding:40px;">Oldin guruh tanlang</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+let groupsData = [];
+let attendanceData = [];
+
+// Initialize today's date
+document.getElementById('attDate').valueAsDate = new Date();
+
+async function initData() {
+  const groupsRes = await Panel.apiGet('/api/kindergarden/groups/');
+  if (groupsRes) {
+    groupsData = groupsRes;
+    const select = document.getElementById('attGroup');
+    select.innerHTML += groupsData.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+  }
+}
+
+async function loadAttendance() {
+  const date = document.getElementById('attDate').value;
+  const groupId = document.getElementById('attGroup').value;
+  const tbody = document.getElementById('attBody');
+
+  if (!groupId || !date) {
+    tbody.innerHTML = '<tr><td colspan="3" class="text-center empty-state" style="padding:40px;">Guruh va sana tanlang</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = '<tr><td colspan="3" class="text-center"><div class="page-loader"><span class="spinner"></span></div></td></tr>';
+
+  const res = await Panel.apiGet(`/api/kindergarden/attendance/?date=${date}&group_id=${groupId}`);
+  if (!res) return;
+  attendanceData = res;
+
+  if (attendanceData.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="3" class="text-center empty-state" style="padding:40px;">Bu guruhda bolalar yo\'q</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = attendanceData.map(a => `
+    <tr class="fade-in" data-child-id="${a.child.id}">
+      <td>
+        <div class="flex items-center gap-2">
+          <div style="width:36px;height:36px;border-radius:6px;overflow:hidden;background:var(--primary-light);">
+            ${a.child.photo ? `<img src="${a.child.photo}" style="width:100%;height:100%;object-fit:cover;">` : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;">👶</div>'}
+          </div>
+          <strong>${a.child.first_name} ${a.child.last_name}</strong>
+        </div>
+      </td>
+      <td>
+        <div class="status-btn-group" id="statusGroup_${a.child.id}">
+          <button class="status-btn ${a.status === 'present' ? 'active-present' : ''}" onclick="setStatus('${a.child.id}', 'present')">Keldi</button>
+          <button class="status-btn ${a.status === 'absent' ? 'active-absent' : ''}" onclick="setStatus('${a.child.id}', 'absent')">Kelmadi</button>
+          <button class="status-btn ${a.status === 'late' ? 'active-late' : ''}" onclick="setStatus('${a.child.id}', 'late')">Kechikdi</button>
+          <button class="status-btn ${a.status === 'sick' ? 'active-sick' : ''}" onclick="setStatus('${a.child.id}', 'sick')">Kasal</button>
+        </div>
+      </td>
+      <td style="color:var(--text-muted);font-size:0.8rem;">
+        ${a.time_in ? Panel.formatTime('2000-01-01T' + a.time_in) : '-'} / 
+        ${a.time_out ? Panel.formatTime('2000-01-01T' + a.time_out) : '-'}
+      </td>
+    </tr>
+  `).join('');
+}
+
+function setStatus(childId, status) {
+  // Update UI
+  const group = document.getElementById(`statusGroup_${childId}`);
+  const buttons = group.querySelectorAll('.status-btn');
+  buttons.forEach(b => b.className = 'status-btn');
+  
+  if (status === 'present') buttons[0].classList.add('active-present');
+  else if (status === 'absent') buttons[1].classList.add('active-absent');
+  else if (status === 'late') buttons[2].classList.add('active-late');
+  else if (status === 'sick') buttons[3].classList.add('active-sick');
+
+  // Update data array
+  const record = attendanceData.find(a => a.child.id === childId);
+  if (record) record.status = status;
+}
+
+async function saveAttendance() {
+  const date = document.getElementById('attDate').value;
+  const groupId = document.getElementById('attGroup').value;
+
+  if (!groupId || !date || attendanceData.length === 0) {
+    return Panel.toast('Saqlash uchun ma\'lumot yo\'q', 'error');
+  }
+
+  const payload = {
+    date: date,
+    group_id: groupId,
+    records: attendanceData.map(a => ({
+      child_id: a.child.id,
+      status: a.status
+    }))
+  };
+
+  const btn = document.getElementById('saveAttBtn');
+  btn.disabled = true;
+  btn.textContent = 'Saqlanmoqda...';
+
+  const res = await Panel.apiPost('/api/kindergarden/attendance/mark/', payload);
+  
+  btn.disabled = false;
+  btn.textContent = 'Saqlash';
+
+  if (res && res.ok) {
+    Panel.toast('Davomat saqlandi', 'success');
+  }
+}
+
+initData();
+</script>
+{% endblock %}

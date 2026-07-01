@@ -1,0 +1,217 @@
+{% extends 'panel/base.html' %}
+{% block title %}Xodimlar{% endblock %}
+{% block navbar_title %}Xodimlar Boshqaruvi{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Xodimlar</h1>
+    <p>Bog'cha ishchilari, tarbiyachilar va boshqalar</p>
+  </div>
+  <button class="btn btn-primary" onclick="openStaffModal()">
+    + Xodim qo'shish
+  </button>
+</div>
+
+<div class="card">
+  <div class="table-wrap">
+    <table id="staffTable">
+      <thead>
+        <tr>
+          <th>FIO</th>
+          <th>Username</th>
+          <th>Telefon</th>
+          <th>Rol</th>
+          <th>Guruhlar</th>
+          <th>Amallar</th>
+        </tr>
+      </thead>
+      <tbody id="staffBody">
+        <tr><td colspan="6" class="text-center"><div class="page-loader"><span class="spinner"></span></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal: Qo'shish -->
+<div class="modal-overlay" id="staffModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Xodim ma'lumotlari</h3>
+      <button class="modal-close" onclick="Panel.closeModal('staffModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form id="staffForm">
+        <input type="hidden" id="s_id">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Ism</label>
+            <input type="text" id="s_first_name" class="form-input" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Familiya</label>
+            <input type="text" id="s_last_name" class="form-input" required>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Username</label>
+            <input type="text" id="s_username" class="form-input" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Parol (ixtiyoriy)</label>
+            <input type="password" id="s_password" class="form-input" placeholder="O'zgartirish uchun...">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Telefon</label>
+            <input type="text" id="s_phone" class="form-input">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Rol</label>
+            <input type="text" id="s_role" class="form-input" list="rolesList" placeholder="Masalan: Tarbiyachi" required>
+            <datalist id="rolesList"></datalist>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Guruh</label>
+          <select id="s_groups" class="form-select" required>
+            <option value="">Tanlang...</option>
+          </select>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="Panel.closeModal('staffModal')">Bekor qilish</button>
+      <button class="btn btn-primary" id="saveStaffBtn" onclick="saveStaff()">Saqlash</button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+let rolesData = [];
+let groupsData = [];
+
+async function initData() {
+  const [rolesRes, groupsRes] = await Promise.all([
+    Panel.apiGet('/api/kindergarden/roles/'),
+    Panel.apiGet('/api/kindergarden/groups/')
+  ]);
+  if (rolesRes) rolesData = rolesRes;
+  if (groupsRes) groupsData = groupsRes;
+
+  const roleList = document.getElementById('rolesList');
+  roleList.innerHTML = rolesData.map(r => `<option value="${r.name}">`).join('');
+
+  const groupSelect = document.getElementById('s_groups');
+  groupSelect.innerHTML = '<option value="">Tanlang...</option>' + groupsData.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+
+  loadStaff();
+}
+
+async function loadStaff() {
+  const data = await Panel.apiGet('/api/kindergarden/staff/');
+  const tbody = document.getElementById('staffBody');
+  if (!data) return;
+
+  if (data.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center empty-state" style="padding:40px;">Xodimlar yo\'q</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = data.map(s => {
+    const groups = s.groups.map(g => `<span class="badge badge-primary">${g.name}</span>`).join(' ') || '-';
+    return `
+    <tr class="fade-in">
+      <td>
+        <div class="flex items-center gap-2">
+          ${s.name || ''} ${s.surname || ''}
+        </div>
+      </td>
+      <td>${s.username}</td>
+      <td>${s.phone || '-'}</td>
+      <td><span class="badge badge-success">${s.role ? s.role.name : '-'}</span></td>
+      <td>${groups}</td>
+      <td>
+        <button class="btn-icon" title="Tahrirlash" onclick='editStaff(${JSON.stringify(s).replace(/'/g, "&apos;")})'>✏️</button>
+        <button class="btn-icon text-error" title="O'chirish" onclick="deleteStaff('${s.id}', '${s.name || s.username}')">🗑️</button>
+      </td>
+    </tr>
+  `}).join('');
+}
+
+function openStaffModal() {
+  document.getElementById('staffForm').reset();
+  document.getElementById('s_id').value = '';
+  document.getElementById('s_password').required = true;
+  Panel.openModal('staffModal');
+}
+
+function editStaff(s) {
+  document.getElementById('s_id').value = s.id;
+  document.getElementById('s_first_name').value = s.name || '';
+  document.getElementById('s_last_name').value = s.surname || '';
+  document.getElementById('s_username').value = s.username || '';
+  document.getElementById('s_password').required = false;
+  document.getElementById('s_phone').value = s.phone || '';
+  if(s.role) document.getElementById('s_role').value = s.role.name || '';
+  
+  if (s.groups && s.groups.length > 0) {
+    document.getElementById('s_groups').value = s.groups[0].id;
+  } else {
+    document.getElementById('s_groups').value = '';
+  }
+  
+  Panel.openModal('staffModal');
+}
+
+async function saveStaff() {
+  const id = document.getElementById('s_id').value;
+  const btn = document.getElementById('saveStaffBtn');
+  const payload = {
+    name: document.getElementById('s_first_name').value,
+    surname: document.getElementById('s_last_name').value,
+    username: document.getElementById('s_username').value,
+    phone: document.getElementById('s_phone').value,
+    role_name: document.getElementById('s_role').value,
+  };
+  
+  const pwd = document.getElementById('s_password').value;
+  if (!id && !pwd) return Panel.toast('Parol kiritish majburiy', 'error');
+  if (pwd) payload.password = pwd;
+  
+  const gVal = document.getElementById('s_groups').value;
+  payload.group_ids = gVal ? [gVal] : [];
+
+  btn.disabled = true;
+  btn.textContent = 'Saqlanmoqda...';
+
+  const url = id ? `/api/kindergarden/staff/${id}/edit/` : '/api/kindergarden/staff/add/';
+  const res = id ? await Panel.apiPatch(url, payload) : await Panel.apiPost(url, payload);
+  
+  btn.disabled = false;
+  btn.textContent = 'Saqlash';
+
+  if (res && res.ok) {
+    Panel.toast('Saqlandi', 'success');
+    Panel.closeModal('staffModal');
+    loadStaff();
+  }
+}
+
+async function deleteStaff(id, name) {
+  if (!Panel.confirm(`"${name}" ismli xodimni o'chirmoqchimisiz?`)) return;
+  const res = await Panel.apiDelete(`/api/kindergarden/staff/${id}/delete/`);
+  if (res && res.ok) {
+    Panel.toast('Xodim o\'chirildi', 'success');
+    loadStaff();
+  }
+}
+
+initData();
+</script>
+{% endblock %}

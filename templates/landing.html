@@ -1,0 +1,339 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KinderCRM — Bog'cha Ro'yxatdan O'tish</title>
+  <meta name="description" content="Bolalar bog'chasini raqamli boshqaruvga o'tkazing. Arizangizni qoldiring — 24 soat ichida bog'lanamiz.">
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{% static 'css/landing.css' %}" />
+</head>
+<body>
+
+<!-- ANIMATED BACKGROUND -->
+<div class="bg-animated" aria-hidden="true">
+  <div class="bg-orb bg-orb-1"></div>
+  <div class="bg-orb bg-orb-2"></div>
+  <div class="bg-orb bg-orb-3"></div>
+</div>
+
+<!-- TOAST -->
+<div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
+<div class="wrapper">
+
+  <!-- ═══ NAVBAR ═══ -->
+  <nav class="navbar">
+    <a href="#" class="nav-logo">
+      <div class="nav-logo-icon" aria-hidden="true">🎒</div>
+      <span class="nav-logo-text">Kinder<span>CRM</span></span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="#features">Imkoniyatlar</a></li>
+      <li><a href="#how">Qanday ishlaydi</a></li>
+      <li><a href="#form-section" class="nav-cta">Ariza qoldirish</a></li>
+    </ul>
+  </nav>
+
+  <!-- ═══ HERO ═══ -->
+  <section class="hero" id="form-section">
+
+    <!-- LEFT: info -->
+    <div class="hero-content">
+      <div class="hero-badge">
+        <span class="hero-badge-dot"></span>
+        O'zbekistoning #1 Bog'cha CRM tizimi
+      </div>
+      <h1 class="hero-title">
+        Bog'changizni <span class="gradient-text">zamonaviy</span> boshqaruvga o'tkazing
+      </h1>
+      <p class="hero-desc">
+        Davomat, hisobotlar, yuz tanish texnologiyasi va ota-onalar bilan muloqot — hammasi bitta tizimda.
+        Arizangizni qoldiring, <strong>24 soat ichida</strong> mutaxassisimiz siz bilan bog'lanadi.
+      </p>
+
+      <div class="hero-features-list">
+        <div class="hfl-item"><span class="hfl-icon">👁️</span>Yuz tanish orqali davomat</div>
+        <div class="hfl-item"><span class="hfl-icon">📊</span>Kunlik hisobotlar</div>
+        <div class="hfl-item"><span class="hfl-icon">🔔</span>Real-time bildirishnomalar</div>
+        <div class="hfl-item"><span class="hfl-icon">📱</span>Mobil ilovalar</div>
+        <div class="hfl-item"><span class="hfl-icon">🔐</span>Xavfsiz ma'lumot saqlash</div>
+        <!-- <div class="hfl-item"><span class="hfl-icon">☁️</span>Bulut texnologiyasi</div> -->
+      </div>
+
+      <div class="hero-stats">
+        <div class="hero-stat">
+          <span class="hero-stat-number">
+            <span class="count-up" data-target="500" data-suffix="+">0+</span>
+          </span>
+          <span class="hero-stat-label">Faol bog'cha</span>
+        </div>
+        <div class="hero-stat">
+          <span class="hero-stat-number">
+            <span class="count-up" data-target="25000" data-suffix="+">0+</span>
+          </span>
+          <span class="hero-stat-label">Bolalar</span>
+        </div>
+        <div class="hero-stat">
+          <span class="hero-stat-number">
+            <span class="count-up" data-target="14">0</span>
+          </span>
+          <span class="hero-stat-label">Viloyat</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: form card -->
+    <div class="reg-card" id="regCard">
+
+      <!-- ── FORM STATE ── -->
+      <div id="formState">
+        <div class="reg-card-header">
+          <div class="reg-card-icon" aria-hidden="true">📋</div>
+          <div>
+            <h2 class="reg-card-title">Ariza qoldiring</h2>
+            <p class="reg-card-subtitle">Ma'lumotlaringizni qoldiring — 24 soat ichida bog'lanamiz</p>
+          </div>
+        </div>
+
+        <div class="promise-badge">
+          <span class="promise-icon">⏱️</span>
+          <span>24 soat ichida mutaxassisimiz siz bilan bog'lanadi</span>
+        </div>
+
+        <form id="regForm" novalidate>
+          {% csrf_token %}
+
+          <!-- Bog'cha nomi -->
+          <div class="form-group">
+            <label class="form-label" for="name">Bog'cha nomi <span class="req">*</span></label>
+            <div class="form-input-wrap">
+              <span class="fi-icon" aria-hidden="true">🏫</span>
+              <input
+                type="text" id="name" name="name"
+                class="form-input"
+                placeholder="Masalan: Bahor bolalar bog'chasi"
+                maxlength="150"
+                autocomplete="organization"
+              />
+            </div>
+            <div class="form-error" id="nameError" role="alert"></div>
+          </div>
+
+          <!-- Viloyat + Tuman -->
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="region">Viloyat <span class="req">*</span></label>
+              <div class="form-input-wrap">
+                <select id="region" name="region" class="form-input sel">
+                  <option value="">Tanlang</option>
+                  <option value="Toshkent shahri">Toshkent shahri</option>
+                  <option value="Toshkent viloyati">Toshkent viloyati</option>
+                  <option value="Samarqand">Samarqand</option>
+                  <option value="Namangan">Namangan</option>
+                  <option value="Farg'ona">Farg'ona</option>
+                  <option value="Andijon">Andijon</option>
+                  <option value="Buxoro">Buxoro</option>
+                  <option value="Qashqadaryo">Qashqadaryo</option>
+                  <option value="Surxondaryo">Surxondaryo</option>
+                  <option value="Xorazm">Xorazm</option>
+                  <option value="Navoiy">Navoiy</option>
+                  <option value="Jizzax">Jizzax</option>
+                  <option value="Sirdaryo">Sirdaryo</option>
+                  <option value="Qoraqalpog'iston">Qoraqalpog'iston</option>
+                </select>
+              </div>
+              <div class="form-error" id="regionError" role="alert"></div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="district">Tuman / Shahar <span class="req">*</span></label>
+              <div class="form-input-wrap">
+                <select id="district" name="district" class="form-input sel" disabled>
+                  <option value="">Avval viloyat</option>
+                </select>
+              </div>
+              <div class="form-error" id="districtError" role="alert"></div>
+            </div>
+          </div>
+
+          <!-- Manzil -->
+          <div class="form-group">
+            <label class="form-label" for="address">Aniq manzil <span class="req-opt">(ixtiyoriy)</span></label>
+            <div class="form-input-wrap">
+              <span class="fi-icon" aria-hidden="true">📍</span>
+              <input
+                type="text" id="address" name="address"
+                class="form-input"
+                placeholder="Ko'cha, mahalla, uy raqami"
+                maxlength="300"
+              />
+            </div>
+          </div>
+
+          <!-- Telefon -->
+          <div class="form-group">
+            <label class="form-label" for="phone">Telefon raqam <span class="req">*</span></label>
+            <div class="phone-row">
+              <span class="phone-code">+998</span>
+              <div class="form-input-wrap" style="flex:1">
+                <input
+                  type="tel" id="phone" name="phone"
+                  class="form-input"
+                  placeholder="90 123 45 67"
+                  maxlength="12"
+                  autocomplete="tel"
+                  style="padding-left:16px;"
+                />
+              </div>
+            </div>
+            <div class="form-error" id="phoneError" role="alert"></div>
+          </div>
+
+          <!-- Submit -->
+          <button type="submit" class="btn-submit" id="submitBtn">
+            <span class="btn-text">Ariza yuborish</span>
+            <span class="btn-icon" aria-hidden="true">🚀</span>
+          </button>
+
+          <p class="form-note">
+            Sizning ma'lumotlaringiz xavfsiz saqlanadi va uchinchi shaxslarga berilmaydi.
+          </p>
+        </form>
+      </div>
+
+      <!-- ── SUCCESS STATE ── -->
+      <div id="successState" class="success-state" aria-live="assertive">
+        <div class="success-anim" aria-hidden="true">
+          <div class="success-ring"></div>
+          <div class="success-check">✓</div>
+        </div>
+        <h3 class="success-title">Arizangiz qabul qilindi!</h3>
+        <p class="success-msg">
+          Rahmat! Mutaxassisimiz <strong>24 soat ichida</strong> siz bilan telefon orqali bog'lanadi.
+        </p>
+        <div class="success-phone-badge" id="submittedPhone"></div>
+        <div class="success-steps">
+          <div class="ss-item">
+            <span class="ss-num">1</span>
+            <span>Arizangiz ko'rib chiqiladi</span>
+          </div>
+          <div class="ss-arrow">→</div>
+          <div class="ss-item">
+            <span class="ss-num">2</span>
+            <span>Mutaxassis qo'ng'iroq qiladi</span>
+          </div>
+          <div class="ss-arrow">→</div>
+          <div class="ss-item">
+            <span class="ss-num">3</span>
+            <span>Tizim sozlanadi</span>
+          </div>
+        </div>
+        <button class="btn-new-app" id="newAppBtn">Yangi ariza qoldirish</button>
+      </div>
+
+    </div><!-- /.reg-card -->
+  </section>
+
+  <!-- ═══ FEATURES ═══ -->
+  <section class="features" id="features">
+    <p class="section-label reveal">Imkoniyatlar</p>
+    <h2 class="section-title reveal">Hamma narsa <span class="gradient-text">bir joyda</span></h2>
+    <p class="section-sub reveal">Zamonaviy texnologiyalar yordamida bog'changizni yangi darajaga olib chiqing</p>
+
+    <div class="features-grid">
+      <div class="feature-card reveal" style="--d:.05s">
+        <div class="feature-icon fi-purple">👁️</div>
+        <h3>Yuz tanish davomat</h3>
+        <p>AI yordamida bolalarning kelish-ketishini avtomatik qayd eting. Ota-onalarga real-time xabar yuboriladi.</p>
+      </div>
+      <div class="feature-card reveal" style="--d:.1s">
+        <div class="feature-icon fi-pink">📊</div>
+        <h3>Kunlik hisobotlar</h3>
+        <p>Har bir bolaning ovqatlanishi, uyqusi va faoliyati haqida batafsil hisobotlar. Ota-ona ilovada ko'radi.</p>
+      </div>
+      <div class="feature-card reveal" style="--d:.15s">
+        <div class="feature-icon fi-blue">🔔</div>
+        <h3>Push bildirishnomalar</h3>
+        <p>Firebase orqali tezkor xabarnomalar. Muhim hodisalarni hech qachon o'tkazib yubormang.</p>
+      </div>
+      <div class="feature-card reveal" style="--d:.2s">
+        <div class="feature-icon fi-green">👥</div>
+        <h3>Ko'p bog'cha boshqaruvi</h3>
+        <p>Bir nechta bog'chani bitta hisob ostida boshqaring. Ma'lumotlar to'liq ajratilgan.</p>
+      </div>
+      <div class="feature-card reveal" style="--d:.25s">
+        <div class="feature-icon fi-orange">🔐</div>
+        <h3>Kuchli xavfsizlik</h3>
+        <p>JWT autentifikatsiya, IP-logging, ikki bosqichli tasdiqlash. Ma'lumotlaringiz himoyada.</p>
+      </div>
+      <div class="feature-card reveal" style="--d:.3s">
+        <div class="feature-icon fi-red">💳</div>
+        <h3>To'lov boshqaruvi</h3>
+        <p>Oylik to'lovlarni kuzating, qarzdorlarni aniqlang, hisobotlarni avtomatik tayyorlang.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ HOW IT WORKS ═══ -->
+  <section class="how-section" id="how">
+    <p class="section-label reveal">Jarayon</p>
+    <h2 class="section-title reveal">Qanday ishlaydi?</h2>
+    <p class="section-sub reveal">Ariza qoldirishdan tizim ishga tushguniga qadar</p>
+
+    <div class="how-steps">
+      <div class="how-step reveal">
+        <div class="how-num">01</div>
+        <div class="how-content">
+          <h3>Ariza qoldiring</h3>
+          <p>Quyidagi formani to'ldiring. Faqat bog'cha nomi, joylashuvi va telefon kerak.</p>
+        </div>
+      </div>
+      <div class="how-connector reveal"></div>
+      <div class="how-step reveal">
+        <div class="how-num">02</div>
+        <div class="how-content">
+          <h3>24 soat ichida qo'ng'iroq</h3>
+          <p>Mutaxassisimiz siz bilan bog'lanib, tizimni sozlash bo'yicha maslahat beradi.</p>
+        </div>
+      </div>
+      <div class="how-connector reveal"></div>
+      <div class="how-step reveal">
+        <div class="how-num">03</div>
+        <div class="how-content">
+          <h3>Tizim sozlanadi</h3>
+          <p>Bog'chaga mos sozlamalar, xodimlar va bolalar kiritiladi. 1-2 kun ichida tayyor.</p>
+        </div>
+      </div>
+      <div class="how-connector reveal"></div>
+      <div class="how-step reveal">
+        <div class="how-num">04</div>
+        <div class="how-content">
+          <h3>Boshqaruvni boshlang</h3>
+          <p>Dashboard orqali barcha jarayonlarni real-time boshqaring.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ FOOTER ═══ -->
+  <footer class="footer">
+    <div class="footer-logo">
+      <span>🎒</span> KinderCRM
+    </div>
+    <p class="footer-copy">© 2025 KinderCRM. Barcha huquqlar himoyalangan.</p>
+    <ul class="footer-links">
+      <li><a href="#">Maxfiylik</a></li>
+      <li><a href="#">Shartlar</a></li>
+      <li><a href="#">Aloqa</a></li>
+    </ul>
+  </footer>
+
+</div><!-- /.wrapper -->
+
+<script src="{% static 'js/landing.js' %}"></script>
+</body>
+</html>

@@ -1,0 +1,96 @@
+{% extends 'superadmin/base.html' %}
+{% block title %}Arizalar{% endblock %}
+
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:24px;">
+  <div>
+    <h1 style="color:#fff; font-size:1.5rem;">Arizalar</h1>
+    <p style="color:var(--text-secondary);">Bog'cha ochish uchun kelib tushgan arizalar</p>
+  </div>
+  
+  <div style="display:flex; gap:8px;">
+    <a href="?status=all" class="btn {% if status_filter == 'all' %}btn-primary{% else %}btn-outline{% endif %}">Hammasi</a>
+    <a href="?status=pending" class="btn {% if status_filter == 'pending' %}btn-primary{% else %}btn-outline{% endif %}">Kutilmoqda</a>
+    <a href="?status=active" class="btn {% if status_filter == 'active' %}btn-primary{% else %}btn-outline{% endif %}">Faol</a>
+    <a href="?status=inactive" class="btn {% if status_filter == 'inactive' %}btn-primary{% else %}btn-outline{% endif %}">Rad etilgan</a>
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>ID / Bog'cha</th>
+          <th>Manzil</th>
+          <th>Telefon</th>
+          <th>Holat</th>
+          <th>Sana</th>
+          <th>Amallar</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for app in applications %}
+        <tr>
+          <td>
+            <div style="font-size:0.75rem; color:var(--text-muted); font-family:monospace;">{{ app.id|slice:":8" }}...</div>
+            <strong style="color:#fff;">{{ app.name }}</strong>
+          </td>
+          <td>
+            <div>{{ app.region }}, {{ app.district }}</div>
+            <div style="font-size:0.8rem; color:var(--text-secondary);">{{ app.address }}</div>
+          </td>
+          <td>{{ app.phone }}</td>
+          <td>
+            {% if app.status == 'pending' %}<span class="badge bg-pending">Kutilmoqda</span>{% endif %}
+            {% if app.status == 'active' %}<span class="badge bg-active">Faol</span>{% endif %}
+            {% if app.status == 'inactive' %}<span class="badge bg-inactive">Rad etilgan</span>{% endif %}
+          </td>
+          <td style="color:var(--text-secondary); font-size:0.8rem;">{{ app.applied_at|date:"d.m.Y H:i" }}</td>
+          <td>
+            {% if app.status == 'pending' %}
+            <button class="btn btn-primary btn-sm" onclick="openCreateModal('{{ app.id }}', '{{ app.name|escapejs }}')">Faollashtirish</button>
+            <button class="btn btn-outline btn-sm" style="color:var(--error); border-color:var(--error);" onclick="updateAppStatus('{{ app.id }}', 'inactive')">Rad etish</button>
+            {% else %}
+              -
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" style="text-align:center; padding:40px; color:var(--text-muted);">Ma'lumot topilmadi</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal: Bog'cha va Admin yaratish -->
+<div class="modal-overlay" id="createKgModal">
+  <div class="modal">
+    <div class="modal-header">
+      Bog'cha Faollashtirish
+    </div>
+    <div class="modal-body">
+      <p style="margin-bottom:16px; font-size:0.9rem; color:var(--text-secondary);">
+        Siz hozir <strong id="c_kg_name" style="color:#fff;"></strong> uchun admin akkaunt va tizim bazasini yaratmoqdasiz.
+      </p>
+      
+      <div class="form-group">
+        <label class="form-label">Admin Username</label>
+        <input type="text" id="c_username" class="form-control" placeholder="Masalan: bahor_admin">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Parol (kamida 8ta belgi)</label>
+        <input type="password" id="c_password" class="form-control">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('createKgModal')">Bekor qilish</button>
+      <button class="btn btn-primary" id="createKgBtn" onclick="createKindergarten()">Yaratish</button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

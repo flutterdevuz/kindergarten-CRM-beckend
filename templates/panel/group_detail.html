@@ -1,0 +1,296 @@
+{% extends 'panel/base.html' %}
+{% block title %}Guruh Tafsiloti{% endblock %}
+{% block navbar_title %}Guruh Tafsiloti{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <a href="/panel/groups/" class="btn btn-outline" style="margin-bottom:8px;">← Orqaga</a>
+    <h1 id="groupTitle">Yuklanmoqda...</h1>
+    <p id="groupMeta"></p>
+  </div>
+  <div style="display:flex;gap:10px;">
+    <button class="btn btn-outline" onclick="openAddChildModal()">+ Bola qo'shish</button>
+    <button class="btn btn-primary" onclick="openAddStaffModal()">+ Xodim biriktirish</button>
+  </div>
+</div>
+
+<!-- Tabs -->
+<div class="tabs" style="margin-bottom:24px;">
+  <button class="tab-btn active" id="tabChildrenBtn" onclick="switchTab('children')">👶 Bolalar</button>
+  <button class="tab-btn" id="tabStaffBtn" onclick="switchTab('staff')">👨‍🏫 Xodimlar</button>
+</div>
+
+<!-- Children Tab -->
+<div id="tabChildren">
+  <div class="card">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Ismi</th>
+            <th>Familiyasi</th>
+            <th>Tug'ilgan sana</th>
+            <th>Jinsi</th>
+            <th>Amallar</th>
+          </tr>
+        </thead>
+        <tbody id="childrenBody">
+          <tr><td colspan="6" class="text-center"><div class="page-loader"><span class="spinner"></span></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Staff Tab -->
+<div id="tabStaff" style="display:none;">
+  <div class="card">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Ism Familiya</th>
+            <th>Username</th>
+            <th>Rol</th>
+            <th>Amallar</th>
+          </tr>
+        </thead>
+        <tbody id="staffBody">
+          <tr><td colspan="4" class="text-center"><div class="page-loader"><span class="spinner"></span></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Bola qo'shish -->
+<div class="modal-overlay" id="addChildModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Guruhga bola qo'shish</h3>
+      <button class="modal-close" onclick="Panel.closeModal('addChildModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Bolani tanlang</label>
+        <select id="childSelect" class="form-select">
+          <option value="">— Tanlang —</option>
+        </select>
+        <div class="form-error-text">Guruhga biriktirilmagan bolalar ko'rsatiladi</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="Panel.closeModal('addChildModal')">Bekor qilish</button>
+      <button class="btn btn-primary" id="addChildBtn" onclick="addChildToGroup()">Qo'shish</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Xodim biriktirish -->
+<div class="modal-overlay" id="addStaffModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Guruhga xodim biriktirish</h3>
+      <button class="modal-close" onclick="Panel.closeModal('addStaffModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Xodimni tanlang</label>
+        <select id="staffSelect" class="form-select">
+          <option value="">— Tanlang —</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="Panel.closeModal('addStaffModal')">Bekor qilish</button>
+      <button class="btn btn-primary" id="addStaffBtn" onclick="addStaffToGroup()">Biriktirish</button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// URL dan group ID ni olish
+const pathParts = window.location.pathname.split('/').filter(Boolean);
+const groupId = pathParts[pathParts.length - 1];
+
+let groupData = null;
+let allChildren = [];
+let allStaff = [];
+
+async function loadGroupDetail() {
+  const data = await Panel.apiGet(`/api/kindergarden/groups/${groupId}/`);
+  if (!data) return;
+  groupData = data;
+  document.getElementById('groupTitle').textContent = data.name;
+  document.getElementById('groupMeta').textContent =
+    `👶 ${data.children_count || 0} bola  •  👨‍🏫 ${data.staff_count || 0} xodim`;
+  document.title = `${data.name} — KinderCRM`;
+}
+
+async function loadGroupChildren() {
+  const data = await Panel.apiGet(`/api/kindergarden/children/?group=${groupId}`);
+  const tbody = document.getElementById('childrenBody');
+  if (!data) return;
+
+  if (data.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center empty-state" style="padding:40px;">Bu guruhda hali bola yo\'q</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = data.map((c, i) => `
+    <tr class="fade-in">
+      <td>${i + 1}</td>
+      <td>${c.name || '-'}</td>
+      <td>${c.surname || '-'}</td>
+      <td>${c.birth_day ? Panel.formatDate(c.birth_day) : '-'}</td>
+      <td>${c.gender === 'male' ? '👦 O\'g\'il' : c.gender === 'female' ? '👧 Qiz' : '-'}</td>
+      <td>
+        <button class="btn-icon text-error" title="Guruhdan chiqarish" onclick="removeChildFromGroup('${c.id}', '${c.name || c.id}')">✂️</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+async function loadGroupStaff() {
+  const data = await Panel.apiGet(`/api/kindergarden/staff/?group=${groupId}`);
+  const tbody = document.getElementById('staffBody');
+  if (!data) return;
+
+  if (data.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" class="text-center empty-state" style="padding:40px;">Bu guruhda hali xodim yo\'q</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = data.map(s => `
+    <tr class="fade-in">
+      <td>${s.name || ''} ${s.surname || ''}</td>
+      <td>${s.username || '-'}</td>
+      <td><span class="badge badge-success">${s.role ? s.role.name : '-'}</span></td>
+      <td>
+        <button class="btn-icon text-error" title="Guruhdan chiqarish" onclick="removeStaffFromGroup('${s.id}', '${s.name || s.id}')">✂️</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+async function openAddChildModal() {
+  // Barcha bolalarni olish (guruhsiz yoki boshqa guruhda)
+  const data = await Panel.apiGet('/api/kindergarden/children/');
+  if (!data) return;
+  allChildren = data.filter(c => !c.group || c.group === groupId);
+
+  const sel = document.getElementById('childSelect');
+  sel.innerHTML = '<option value="">— Tanlang —</option>' +
+    allChildren.map(c => `<option value="${c.id}">${c.name || ''} ${c.surname || ''}</option>`).join('');
+
+  Panel.openModal('addChildModal');
+}
+
+async function openAddStaffModal() {
+  const data = await Panel.apiGet('/api/kindergarden/staff/');
+  if (!data) return;
+  allStaff = data;
+
+  const sel = document.getElementById('staffSelect');
+  sel.innerHTML = '<option value="">— Tanlang —</option>' +
+    allStaff.map(s => `<option value="${s.id}">${s.name || ''} ${s.surname || ''} (${s.username})</option>`).join('');
+
+  Panel.openModal('addStaffModal');
+}
+
+async function addChildToGroup() {
+  const childId = document.getElementById('childSelect').value;
+  if (!childId) return Panel.toast('Bolani tanlang', 'error');
+
+  const btn = document.getElementById('addChildBtn');
+  btn.disabled = true; btn.textContent = 'Qo\'shilmoqda...';
+
+  const res = await Panel.apiPatch(`/api/kindergarden/children/${childId}/edit/`, { group: groupId });
+  btn.disabled = false; btn.textContent = 'Qo\'shish';
+
+  if (res && res.ok) {
+    Panel.toast('Bola guruhga qo\'shildi', 'success');
+    Panel.closeModal('addChildModal');
+    loadGroupChildren();
+    loadGroupDetail();
+  } else if (res) {
+    const err = await res.json().catch(() => ({}));
+    Panel.toast(err.detail || err.error || 'Xatolik yuz berdi', 'error');
+  }
+}
+
+async function addStaffToGroup() {
+  const staffId = document.getElementById('staffSelect').value;
+  if (!staffId) return Panel.toast('Xodimni tanlang', 'error');
+
+  // Staff'ning mavjud guruhlarini olib, shu guruhni qo'shamiz
+  const staffObj = allStaff.find(s => s.id === staffId);
+  const existingGroupIds = (staffObj?.groups || []).map(g => g.id);
+  if (!existingGroupIds.includes(groupId)) existingGroupIds.push(groupId);
+
+  const btn = document.getElementById('addStaffBtn');
+  btn.disabled = true; btn.textContent = 'Biriktirilmoqda...';
+
+  const res = await Panel.apiPatch(`/api/kindergarden/staff/${staffId}/edit/`, {
+    group_ids: existingGroupIds,
+    username: staffObj?.username,
+  });
+  btn.disabled = false; btn.textContent = 'Biriktirish';
+
+  if (res && res.ok) {
+    Panel.toast('Xodim guruhga biriktirildi', 'success');
+    Panel.closeModal('addStaffModal');
+    loadGroupStaff();
+    loadGroupDetail();
+  } else if (res) {
+    const err = await res.json().catch(() => ({}));
+    Panel.toast(err.detail || err.error || 'Xatolik yuz berdi', 'error');
+  }
+}
+
+async function removeChildFromGroup(childId, name) {
+  if (!Panel.confirm(`"${name}" ni guruhdan chiqarmoqchimisiz?`)) return;
+  const res = await Panel.apiPatch(`/api/kindergarden/children/${childId}/edit/`, { group: null });
+  if (res && res.ok) {
+    Panel.toast('Bola guruhdan chiqarildi', 'success');
+    loadGroupChildren();
+    loadGroupDetail();
+  }
+}
+
+async function removeStaffFromGroup(staffId, name) {
+  if (!Panel.confirm(`"${name}" ni guruhdan chiqarmoqchimisiz?`)) return;
+
+  const data = await Panel.apiGet(`/api/kindergarden/staff/${staffId}/`);
+  if (!data) return;
+  const newGroups = (data.groups || []).map(g => g.id).filter(id => id !== groupId);
+
+  const res = await Panel.apiPatch(`/api/kindergarden/staff/${staffId}/edit/`, {
+    group_ids: newGroups,
+    username: data.username,
+  });
+  if (res && res.ok) {
+    Panel.toast('Xodim guruhdan chiqarildi', 'success');
+    loadGroupStaff();
+    loadGroupDetail();
+  }
+}
+
+function switchTab(tab) {
+  document.getElementById('tabChildren').style.display = tab === 'children' ? '' : 'none';
+  document.getElementById('tabStaff').style.display = tab === 'staff' ? '' : 'none';
+  document.getElementById('tabChildrenBtn').classList.toggle('active', tab === 'children');
+  document.getElementById('tabStaffBtn').classList.toggle('active', tab === 'staff');
+}
+
+// Init
+loadGroupDetail();
+loadGroupChildren();
+loadGroupStaff();
+</script>
+{% endblock %}

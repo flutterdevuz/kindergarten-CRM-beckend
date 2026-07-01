@@ -1,0 +1,258 @@
+{% extends 'panel/base.html' %}
+{% block title %}Ota-onalar{% endblock %}
+{% block navbar_title %}Ota-onalar Boshqaruvi{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Ota-onalar</h1>
+    <p>Ota-onalar akkauntlari (Mobil ilovaga kirish uchun)</p>
+  </div>
+  <button class="btn btn-primary" onclick="openParentModal()">
+    + Ota-ona qo'shish
+  </button>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div style="display:flex;gap:10px;">
+      <select id="groupFilter" class="form-select" style="width:200px;" onchange="loadParents()">
+        <option value="">Barcha guruhlar</option>
+      </select>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table id="parentsTable">
+      <thead>
+        <tr>
+          <th>FIO</th>
+          <th>Username</th>
+          <th>Telefon</th>
+          <th>Guruh / Bola</th>
+          <th>Amallar</th>
+        </tr>
+      </thead>
+      <tbody id="parentsBody">
+        <tr><td colspan="5" class="text-center"><div class="page-loader"><span class="spinner"></span></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="parentModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Ota-ona ma'lumotlari</h3>
+      <button class="modal-close" onclick="Panel.closeModal('parentModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form id="parentForm">
+        <input type="hidden" id="p_id">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Ism</label>
+            <input type="text" id="p_first_name" class="form-input" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Familiya</label>
+            <input type="text" id="p_last_name" class="form-input" required>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Username (Ilovaga kirish uchun)</label>
+            <input type="text" id="p_username" class="form-input" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Parol (ixtiyoriy)</label>
+            <input type="password" id="p_password" class="form-input" placeholder="O'zgartirish uchun...">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Telefon</label>
+            <input type="text" id="p_phone" class="form-input">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Guruh</label>
+            <select id="p_group" class="form-select" onchange="loadGroupChildren(this.value)" required></select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Farzandi (Bola)</label>
+          <select id="p_child" class="form-select" required>
+            <option value="">Oldin guruh tanlang</option>
+          </select>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="Panel.closeModal('parentModal')">Bekor qilish</button>
+      <button class="btn btn-primary" id="saveParentBtn" onclick="saveParent()">Saqlash</button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+let groupsData = [];
+
+async function initData() {
+  const groupsRes = await Panel.apiGet('/api/kindergarden/groups/');
+  if (groupsRes) {
+    groupsData = groupsRes;
+    const gFilter = document.getElementById('groupFilter');
+    const pGroup = document.getElementById('p_group');
+    const opts = groupsData.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+    gFilter.innerHTML += opts;
+    pGroup.innerHTML = '<option value="">Tanlang...</option>' + opts;
+  }
+  await loadParents();
+
+  // Bolalar sahifasidan avtomatik yo'naltirilganmi?
+  const newChildRaw = sessionStorage.getItem('newChildData');
+  if (newChildRaw) {
+    sessionStorage.removeItem('newChildData');
+    try {
+      const nc = JSON.parse(newChildRaw);
+      // Modal ni tozalab ochamiz
+      document.getElementById('parentForm').reset();
+      document.getElementById('p_id').value = '';
+      document.getElementById('p_password').required = true;
+      document.getElementById('p_child').innerHTML = '<option value="">Yuklanmoqda...</option>';
+
+      // Guruhni tanlang va bolani yuklang
+      if (nc.group_id) {
+        document.getElementById('p_group').value = nc.group_id;
+        await loadGroupChildren(nc.group_id, nc.child_id);
+      }
+
+      // Bannerni ko'rsatamiz
+      Panel.openModal('parentModal');
+      setTimeout(() => {
+        Panel.toast(`"${nc.child_name}" uchun ota-ona qo'shing`, 'info');
+      }, 300);
+    } catch(e) {}
+  }
+}
+
+async function loadGroupChildren(groupId, selectedChildId = null) {
+  const cSelect = document.getElementById('p_child');
+  if (!groupId) {
+    cSelect.innerHTML = '<option value="">Oldin guruh tanlang</option>';
+    return;
+  }
+  const children = await Panel.apiGet(`/api/kindergarden/children/?group=${groupId}`);
+  if (children) {
+    cSelect.innerHTML = children.map(c => `<option value="${c.id}" ${selectedChildId === c.id ? 'selected' : ''}>${c.name || ''} ${c.surname || ''}</option>`).join('');
+    if (selectedChildId) cSelect.value = selectedChildId;
+  }
+}
+
+async function loadParents() {
+  const group_id = document.getElementById('groupFilter').value;
+  let url = '/api/kindergarden/parent/';
+  if (group_id) url += `?group_id=${group_id}`;
+  
+  const data = await Panel.apiGet(url);
+  const tbody = document.getElementById('parentsBody');
+  if (!data) return;
+
+  if (data.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center empty-state" style="padding:40px;">Ota-onalar topilmadi</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = data.map(p => `
+    <tr class="fade-in">
+      <td><strong>${p.name || ''} ${p.surname || ''}</strong></td>
+      <td>${p.username || '-'}</td>
+      <td>${p.phone || '-'}</td>
+      <td>
+        <span class="badge badge-primary">${p.group_name || '-'}</span><br>
+        <small style="color:var(--text-muted);">${p.child_name || '-'}</small>
+      </td>
+      <td>
+        <button class="btn-icon" title="Tahrirlash" onclick='editParent(${JSON.stringify(p).replace(/'/g, "&apos;")})'>✏️</button>
+        <button class="btn-icon text-error" title="O'chirish" onclick="deleteParent('${p.id}', '${p.name || ''}')">🗑️</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function openParentModal() {
+  document.getElementById('parentForm').reset();
+  document.getElementById('p_id').value = '';
+  document.getElementById('p_password').required = true;
+  document.getElementById('p_child').innerHTML = '<option value="">Oldin guruh tanlang</option>';
+  Panel.openModal('parentModal');
+}
+
+async function editParent(p) {
+  document.getElementById('p_id').value = p.id;
+  document.getElementById('p_first_name').value = p.name || '';
+  document.getElementById('p_last_name').value = p.surname || '';
+  document.getElementById('p_username').value = p.username || '';
+  document.getElementById('p_password').required = false;
+  document.getElementById('p_phone').value = p.phone || '';
+  
+  if (p.group) {
+    document.getElementById('p_group').value = typeof p.group === 'object' ? p.group : p.group;
+    await loadGroupChildren(typeof p.group === 'object' ? p.group : p.group, p.child || null);
+  }
+  
+  Panel.openModal('parentModal');
+}
+
+async function saveParent() {
+  const id = document.getElementById('p_id').value;
+  const btn = document.getElementById('saveParentBtn');
+  
+  const payload = {
+    name: document.getElementById('p_first_name').value,
+    surname: document.getElementById('p_last_name').value,
+    username: document.getElementById('p_username').value,
+    phone: document.getElementById('p_phone').value,
+    group: document.getElementById('p_group').value,
+    child: document.getElementById('p_child').value,
+  };
+  
+  const pwd = document.getElementById('p_password').value;
+  if (!id && !pwd) return Panel.toast('Parol kiritish majburiy', 'error');
+  if (pwd) payload.password = pwd;
+
+  if (!payload.group || !payload.child) {
+    return Panel.toast('Guruh va bolani tanlang', 'error');
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Saqlanmoqda...';
+
+  const url = id ? `/api/kindergarden/parent/${id}/edit/` : '/api/kindergarden/parent/add/';
+  const res = id ? await Panel.apiPatch(url, payload) : await Panel.apiPost(url, payload);
+  
+  btn.disabled = false;
+  btn.textContent = 'Saqlash';
+
+  if (res && res.ok) {
+    Panel.toast('Saqlandi', 'success');
+    Panel.closeModal('parentModal');
+    loadParents();
+  }
+}
+
+async function deleteParent(id, name) {
+  if (!Panel.confirm(`"${name}" ismli ota-onani o'chirmoqchimisiz?`)) return;
+  const res = await Panel.apiDelete(`/api/kindergarden/parent/${id}/delete/`);
+  if (res && res.ok) {
+    Panel.toast('Ota-ona o\'chirildi', 'success');
+    loadParents();
+  }
+}
+
+initData();
+</script>
+{% endblock %}

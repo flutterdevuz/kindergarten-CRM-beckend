@@ -1,0 +1,89 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KinderCRM — Kirish</title>
+  <link rel="stylesheet" href="{% static 'css/panel.css' %}">
+</head>
+<body>
+  <div class="login-page">
+    <div class="login-card fade-in">
+      <div class="login-logo">
+        <div class="login-logo-icon">🏫</div>
+        <h1>Kinder<span>CRM</span></h1>
+        <p>Director Panel — Boshqaruv tizimi</p>
+      </div>
+
+      <div id="loginError" class="login-error" style="display:none;"></div>
+
+      <form id="loginForm" class="login-form">
+        <div class="form-group">
+          <label for="username">Username</label>
+          <input type="text" id="username" placeholder="admin_username" autocomplete="username" required>
+        </div>
+        <div class="form-group">
+          <label for="password">Parol</label>
+          <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" required>
+        </div>
+        <button type="submit" class="btn btn-primary" id="loginBtn">
+          <span id="loginBtnText">Kirish</span>
+          <span id="loginSpinner" class="spinner" style="display:none;"></span>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // Agar token bor bo'lsa dashboard ga redirect
+    if (localStorage.getItem('access_token')) {
+      window.location.href = '/panel/';
+    }
+
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const errorEl = document.getElementById('loginError');
+      const btn = document.getElementById('loginBtn');
+      const btnText = document.getElementById('loginBtnText');
+      const spinner = document.getElementById('loginSpinner');
+
+      errorEl.style.display = 'none';
+      btn.disabled = true;
+      btnText.textContent = 'Kirish...';
+      spinner.style.display = 'inline-block';
+
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+
+      try {
+        const res = await fetch('/api/kindergarden/login/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password }),
+        });
+
+        const data = await res.json();
+
+        if (res.ok && data.access) {
+          localStorage.setItem('access_token', data.access);
+          localStorage.setItem('refresh_token', data.refresh || '');
+          localStorage.setItem('kindergarten_id', data.kindergarten_id || '');
+          localStorage.setItem('username', username);
+          window.location.href = '/panel/';
+        } else {
+          errorEl.textContent = data.detail || data.error || "Username yoki parol noto'g'ri";
+          errorEl.style.display = 'block';
+        }
+      } catch (err) {
+        errorEl.textContent = "Server bilan aloqa yo'q";
+        errorEl.style.display = 'block';
+      }
+
+      btn.disabled = false;
+      btnText.textContent = 'Kirish';
+      spinner.style.display = 'none';
+    });
+  </script>
+</body>
+</html>

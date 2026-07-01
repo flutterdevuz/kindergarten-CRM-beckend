@@ -1,0 +1,76 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>404 — Sahifa topilmadi | KinderCRM</title>
+  <meta name="description" content="Kechirasiz, siz izlagan sahifa topilmadi.">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{% static 'css/404.css' %}" />
+</head>
+<body>
+
+<!-- ANIMATED BACKGROUND -->
+<div class="bg-animated" aria-hidden="true">
+  <div class="bg-orb bg-orb-1"></div>
+  <div class="bg-orb bg-orb-2"></div>
+  <div class="bg-orb bg-orb-3"></div>
+</div>
+
+<!-- PARTICLES -->
+<div class="particles" aria-hidden="true">
+  <div class="particle"></div>
+  <div class="particle"></div>
+  <div class="particle"></div>
+  <div class="particle"></div>
+  <div class="particle"></div>
+  <div class="particle"></div>
+  <div class="particle"></div>
+  <div class="particle"></div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="error-container">
+
+  <!-- Floating Emojis -->
+  <div class="floating-emojis" aria-hidden="true">
+    <span class="float-emoji">🎒</span>
+    <span class="float-emoji">🔍</span>
+    <span class="float-emoji">📚</span>
+    <span class="float-emoji">🧸</span>
+  </div>
+
+  <!-- Glitch 404 -->
+  <div class="error-code" data-text="404" aria-label="404">404</div>
+
+  <h1 class="error-title">Voy! Sahifa topilmadi</h1>
+  <p class="error-desc">
+    Siz izlagan sahifa ko'chirilgan, o'chirilgan yoki hech qachon mavjud bo'lmagan bo'lishi mumkin.
+  </p>
+
+  <!-- Action Buttons -->
+  <div class="error-actions">
+    <a href="/" class="btn-home" id="btnGoHome">
+      <span class="btn-icon">←</span>
+      <span>Bosh sahifaga qaytish</span>
+    </a>
+    <button class="btn-back" id="btnGoBack" onclick="history.back()">
+      Orqaga qaytish
+    </button>
+  </div>
+
+  <!-- Footer -->
+  <div class="error-footer">
+    <span>🎒</span>
+    <a href="/">KinderCRM</a>
+    <span>·</span>
+    <span>Bolalar bog'chasi boshqaruv tizimi</span>
+  </div>
+</div>
+
+</body>
+</html>

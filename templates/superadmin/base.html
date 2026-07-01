@@ -1,0 +1,43 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <title>{% block title %}Superadmin{% endblock %} — KinderCRM</title>
+  <link rel="stylesheet" href="{% static 'css/superadmin.css' %}">
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        Kinder<span>CRM</span>
+      </div>
+      <div class="sidebar-nav">
+        <div class="nav-label">Asosiy</div>
+        <a href="/superadmin/" class="nav-item {% if request.path == '/superadmin/' %}active{% endif %}">Dashboard</a>
+        
+        <div class="nav-label" style="margin-top:16px;">Mijozlar</div>
+        <a href="/superadmin/applications/" class="nav-item {% if '/applications/' in request.path %}active{% endif %}">Arizalar</a>
+        <a href="/superadmin/kindergartens/" class="nav-item {% if '/kindergartens/' in request.path %}active{% endif %}">Bog'chalar</a>
+      </div>
+    </aside>
+    
+    <main class="main-content">
+      <div class="topbar">
+        <div style="font-weight:600; font-size:1.1rem; color:#fff;">
+          Superadmin Panel
+        </div>
+        <div>
+          <a href="/superadmin/logout/" style="color:var(--text-secondary); font-size:0.85rem;">🚪 Chiqish</a>
+        </div>
+      </div>
+      <div class="page-content">
+        {% block content %}{% endblock %}
+      </div>
+    </main>
+  </div>
+  
+  <script src="{% static 'js/superadmin.js' %}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,99 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Dashboard{% endblock %} — KinderCRM</title>
+  <link rel="stylesheet" href="{% static 'css/panel.css' %}">
+  <script>
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+  </script>
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <div class="layout">
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo">
+        <div class="sidebar-logo-icon">🏫</div>
+        <div class="sidebar-logo-text">Kinder<span>CRM</span></div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-label">Asosiy</div>
+        <a href="/panel/" class="nav-item" data-path="/panel/">
+          <span class="nav-icon">📊</span> Dashboard
+        </a>
+
+        <div class="nav-label" style="margin-top:12px;">Boshqaruv</div>
+        <a href="/panel/groups/" class="nav-item" data-path="/panel/groups/">
+          <span class="nav-icon">👥</span> Guruhlar
+        </a>
+        <a href="/panel/staff/" class="nav-item" data-path="/panel/staff/">
+          <span class="nav-icon">👨‍🏫</span> Xodimlar
+        </a>
+        <a href="/panel/children/" class="nav-item" data-path="/panel/children/">
+          <span class="nav-icon">👶</span> Bolalar
+        </a>
+        <a href="/panel/parents/" class="nav-item" data-path="/panel/parents/">
+          <span class="nav-icon">👨‍👩‍👧</span> Ota-onalar
+        </a>
+
+        <div class="nav-label" style="margin-top:12px;">Monitoring</div>
+        <a href="/panel/attendance/" class="nav-item" data-path="/panel/attendance/">
+          <span class="nav-icon">📋</span> Davomat
+        </a>
+        <a href="/panel/chat/" class="nav-item" data-path="/panel/chat/">
+          <span class="nav-icon">💬</span> Chat
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <a href="#" class="nav-item" id="logoutBtn">
+          <span class="nav-icon">🚪</span> Chiqish
+        </a>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <div class="main-content">
+      <header class="top-navbar">
+        <div class="flex items-center gap-2">
+          <button class="hamburger" id="hamburger">☰</button>
+          <span class="navbar-title">{% block navbar_title %}Dashboard{% endblock %}</span>
+        </div>
+        <div class="navbar-right">
+          <button class="btn-icon" id="themeToggle" style="margin-right:15px; font-size:1.2rem;" title="Mavzuni o'zgartirish">🌓</button>
+          <div class="navbar-user">
+            <div class="navbar-user-avatar" id="navAvatar">A</div>
+            <span id="navUsername">Admin</span>
+          </div>
+        </div>
+      </header>
+
+      <div class="page-content fade-in">
+        {% block content %}{% endblock %}
+      </div>
+    </div>
+  </div>
+
+  <script src="{% static 'js/panel-core.js' %}"></script>
+  <script>
+    Panel.init();
+    
+    // Theme toggle
+    const themeBtn = document.getElementById('themeToggle');
+    if (themeBtn) {
+      themeBtn.addEventListener('click', () => {
+        const current = document.documentElement.getAttribute('data-theme');
+        const next = current === 'light' ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', next);
+        localStorage.setItem('theme', next);
+      });
+    }
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

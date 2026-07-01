@@ -1,0 +1,106 @@
+{% extends 'superadmin/base.html' %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 24px;">
+  <h1 style="color:#fff; font-size:1.5rem;">Dashboard</h1>
+  <p style="color:var(--text-secondary);">Umumiy statistika va so'nggi arizalar</p>
+</div>
+
+<div class="stat-grid">
+  <div class="stat-card">
+    <div class="stat-value">{{ total_kindergartens }}</div>
+    <div class="stat-label">Jami Bog'chalar</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value" style="color:var(--success);">{{ active_kindergartens }}</div>
+    <div class="stat-label">Faol Bog'chalar</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value">{{ total_applications }}</div>
+    <div class="stat-label">Jami Arizalar</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value" style="color:var(--primary);">{{ pending_applications }}</div>
+    <div class="stat-label">Kutilayotgan Arizalar</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h2>So'nggi arizalar</h2>
+    <a href="/superadmin/applications/" class="btn btn-outline btn-sm">Barchasini ko'rish</a>
+  </div>
+  <div>
+    <table>
+      <thead>
+        <tr>
+          <th>Bog'cha nomi</th>
+          <th>Viloyat</th>
+          <th>Telefon</th>
+          <th>Holat</th>
+          <th>Sana</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for app in recent_applications %}
+        <tr>
+          <td><strong style="color:#fff;">{{ app.name }}</strong></td>
+          <td>{{ app.region }}</td>
+          <td>{{ app.phone }}</td>
+          <td>
+            {% if app.status == 'pending' %}<span class="badge bg-pending">Kutilmoqda</span>{% endif %}
+            {% if app.status == 'active' %}<span class="badge bg-active">Faol</span>{% endif %}
+            {% if app.status == 'inactive' %}<span class="badge bg-inactive">Rad etilgan</span>{% endif %}
+          </td>
+          <td style="color:var(--text-secondary); font-size:0.8rem;">{{ app.applied_at|date:"d.m.Y H:i" }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5" style="text-align:center; padding:40px; color:var(--text-muted);">Arizalar yo'q</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h2>So'nggi bog'chalar</h2>
+    <a href="/superadmin/kindergartens/" class="btn btn-outline btn-sm">Barchasini ko'rish</a>
+  </div>
+  <div>
+    <table>
+      <thead>
+        <tr>
+          <th>Bog'cha nomi</th>
+          <th>Adminlar</th>
+          <th>Holat</th>
+          <th>Sana</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for kg in kindergartens_list %}
+        <tr>
+          <td><strong style="color:#fff;">{{ kg.name }}</strong></td>
+          <td>{{ kg.admin_count }} ta</td>
+          <td>
+            {% if kg.is_active %}
+            <span class="badge bg-active">Faol</span>
+            {% else %}
+            <span class="badge bg-inactive">Nofaol</span>
+            {% endif %}
+          </td>
+          <td style="color:var(--text-secondary); font-size:0.8rem;">{{ kg.created_at|date:"d.m.Y" }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="4" style="text-align:center; padding:40px; color:var(--text-muted);">Bog'chalar yo'q</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,259 @@
+{% extends 'panel/base.html' %}
+{% block title %}Chat{% endblock %}
+{% block navbar_title %}Chat{% endblock %}
+
+{% block content %}
+<div class="chat-layout">
+  <!-- Chat List Sidebar -->
+  <div class="chat-sidebar">
+    <div class="chat-sidebar-header">
+      Guruhlar
+    </div>
+    <div class="chat-list" id="chatList">
+      <div class="page-loader"><span class="spinner"></span></div>
+    </div>
+  </div>
+
+  <!-- Chat Main Area -->
+  <div class="chat-main" id="chatMain" style="display:none;">
+    <div class="chat-main-header">
+      <div class="chat-item-avatar" id="activeChatAvatar"></div>
+      <div class="chat-item-name" id="activeChatName"></div>
+    </div>
+    
+    <div class="chat-messages" id="chatMessages">
+      <!-- Messages will be loaded here -->
+    </div>
+    
+    <div class="chat-input-area">
+      <button class="chat-input-btn chat-attach-btn" id="attachBtn" title="Fayl yuborish">
+        📎
+      </button>
+      <input type="file" id="fileInput" style="display:none;">
+      
+      <input type="text" id="msgInput" placeholder="Xabar yozing..." autocomplete="off">
+      
+      <button class="chat-input-btn chat-mic-btn" id="micBtn" title="Ovozli xabar">
+        🎤
+      </button>
+      <button class="chat-input-btn chat-send-btn" id="sendBtn" title="Yuborish">
+        ➤
+      </button>
+    </div>
+  </div>
+  
+  <div id="noChatSelected" style="display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:1.1rem;flex:1;">
+    Suhbatni boshlash uchun guruhni tanlang
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let activeChatId = null;
+let pollingInterval = null;
+let lastMessageId = null;
+let currentUsername = localStorage.getItem('username');
+
+// MediaRecorder variables
+let mediaRecorder;
+let audioChunks = [];
+let isRecording = false;
+
+async function loadChatList() {
+  const data = await Panel.apiGet('/api/chat/list/');
+  const listEl = document.getElementById('chatList');
+  if (!data) return;
+
+  if (data.length === 0) {
+    listEl.innerHTML = '<div class="empty-state" style="padding:20px;"><p>Chatlar yo\'q</p></div>';
+    return;
+  }
+
+  listEl.innerHTML = data.map(c => `
+    <div class="chat-item ${activeChatId === c.id ? 'active' : ''}" onclick="openChat('${c.id}', '${c.name}', '${c.image || ''}')">
+      <div class="chat-item-avatar">
+        ${c.image ? `<img src="${c.image}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">` : c.name.charAt(0)}
+      </div>
+      <div class="chat-item-info">
+        <div class="chat-item-name">${c.name}</div>
+        <div class="chat-item-last">${c.last_message ? (c.last_message.sender_name + ': ' + (c.last_message.text || 'fayl')) : 'Xabar yo\'q'}</div>
+      </div>
+      ${c.unread_count > 0 ? `<div class="chat-unread">${c.unread_count}</div>` : ''}
+    </div>
+  `).join('');
+}
+
+async function openChat(id, name, image) {
+  activeChatId = id;
+  document.getElementById('noChatSelected').style.display = 'none';
+  document.getElementById('chatMain').style.display = 'flex';
+  
+  const avatarEl = document.getElementById('activeChatAvatar');
+  avatarEl.innerHTML = image ? `<img src="${image}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">` : name.charAt(0);
+  document.getElementById('activeChatName').textContent = name;
+  
+  // Highlight active
+  document.querySelectorAll('.chat-item').forEach(el => el.classList.remove('active'));
+  const activeItem = document.querySelector(`.chat-item[onclick*="${id}"]`);
+  if (activeItem) activeItem.classList.add('active');
+
+  // Load messages
+  const msgContainer = document.getElementById('chatMessages');
+  msgContainer.innerHTML = '<div class="page-loader"><span class="spinner"></span></div>';
+  
+  await fetchMessages(id, true);
+
+  // Start polling
+  if (pollingInterval) clearInterval(pollingInterval);
+  pollingInterval = setInterval(() => fetchMessages(activeChatId, false), 3000);
+}
+
+async function fetchMessages(chatId, scrollBottom = false) {
+  const data = await Panel.apiGet(`/api/chat/${chatId}/messages/`);
+  if (!data || activeChatId !== chatId) return; // if changed while fetching
+
+  const msgContainer = document.getElementById('chatMessages');
+  
+  if (data.length === 0) {
+    if (scrollBottom) msgContainer.innerHTML = '<div class="chat-empty">Xabarlar yo\'q. Birinchi bo\'lib yozing!</div>';
+    return;
+  }
+
+  // Check if there are new messages
+  if (!scrollBottom && data.length > 0) {
+    const latestId = data[data.length - 1].id;
+    if (latestId === lastMessageId) return; // No new messages
+  }
+
+  msgContainer.innerHTML = data.map(m => {
+    const isSelf = m.sender_username === currentUsername;
+    const time = Panel.formatTime(m.created_at);
+    
+    let mediaHtml = '';
+    if (m.media) {
+      if (m.media.match(/\.(jpeg|jpg|gif|png)$/i) || m.message_type === 'image') {
+        mediaHtml = `<div class="msg-media"><a href="${m.media}" target="_blank"><img src="${m.media}"></a></div>`;
+      } else if (m.media.match(/\.(webm|mp3|wav|m4a|ogg)$/i) || m.message_type === 'voice') {
+        mediaHtml = `<div class="msg-media"><audio controls src="${m.media}" style="max-width:200px;"></audio></div>`;
+      } else {
+        mediaHtml = `<div class="msg-media" style="margin-top:6px;"><a href="${m.media}" target="_blank" style="color:inherit;text-decoration:underline;">📎 Faylni yuklash</a></div>`;
+      }
+    }
+
+    return `
+      <div class="msg ${isSelf ? 'msg-self' : 'msg-other'}">
+        ${!isSelf ? `<div class="msg-sender">${m.sender_name} <span style="font-weight:normal;color:var(--text-muted); font-size:0.6rem;">(${m.sender_role})</span></div>` : ''}
+        ${m.text ? `<div>${m.text.replace(/\\n/g, '<br>')}</div>` : ''}
+        ${mediaHtml}
+        <div class="msg-time">${time}</div>
+      </div>
+    `;
+  }).join('');
+
+  if (data.length > 0) {
+    lastMessageId = data[data.length - 1].id;
+  }
+
+  // Auto scroll to bottom if it's initial load or we are near bottom
+  if (scrollBottom || (msgContainer.scrollHeight - msgContainer.scrollTop - msgContainer.clientHeight < 100)) {
+    msgContainer.scrollTop = msgContainer.scrollHeight;
+  }
+
+  // Mark as read
+  Panel.apiPost(`/api/chat/${chatId}/read/`);
+}
+
+// ── SENDING ──
+const msgInput = document.getElementById('msgInput');
+const sendBtn = document.getElementById('sendBtn');
+const attachBtn = document.getElementById('attachBtn');
+const fileInput = document.getElementById('fileInput');
+
+async function sendMessage(text, file = null, isVoice = false) {
+  if (!activeChatId) return;
+  if (!text && !file) return;
+
+  const formData = new FormData();
+  if (text) formData.append('text', text);
+  if (file) {
+    formData.append('media', file);
+    let msgType = 'file';
+    if (isVoice) {
+      msgType = 'voice';
+    } else if (file.type && file.type.startsWith('image/')) {
+      msgType = 'image';
+    }
+    formData.append('message_type', msgType);
+  } else {
+    formData.append('message_type', 'text');
+  }
+
+  const res = await Panel.apiPost(`/api/chat/${activeChatId}/send/`, formData);
+  if (res && res.ok) {
+    msgInput.value = '';
+    fileInput.value = '';
+    fetchMessages(activeChatId, true); // force scroll
+    loadChatList(); // update sidebar last message
+  }
+}
+
+sendBtn.addEventListener('click', () => {
+  sendMessage(msgInput.value.trim());
+});
+
+msgInput.addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') {
+    sendMessage(msgInput.value.trim());
+  }
+});
+
+attachBtn.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', () => {
+  if (fileInput.files.length > 0) {
+    sendMessage('', fileInput.files[0]);
+  }
+});
+
+// ── VOICE RECORDING ──
+const micBtn = document.getElementById('micBtn');
+
+micBtn.addEventListener('click', async () => {
+  if (isRecording) {
+    // Stop recording
+    mediaRecorder.stop();
+    micBtn.classList.remove('recording');
+    isRecording = false;
+  } else {
+    // Start recording
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorder = new MediaRecorder(stream);
+      audioChunks = [];
+
+      mediaRecorder.addEventListener('dataavailable', event => {
+        audioChunks.push(event.data);
+      });
+
+      mediaRecorder.addEventListener('stop', () => {
+        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+        const file = new File([audioBlob], 'voice.webm', { type: 'audio/webm' });
+        sendMessage('', file, true);
+        
+        // Stop all tracks to release mic
+        stream.getTracks().forEach(track => track.stop());
+      });
+
+      mediaRecorder.start();
+      micBtn.classList.add('recording');
+      isRecording = true;
+    } catch (err) {
+      Panel.toast("Mikrofonga ruxsat berilmadi", "error");
+    }
+  }
+});
+
+// Initial load
+loadChatList();
+</script>
+{% endblock %}

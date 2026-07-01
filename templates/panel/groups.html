@@ -1,0 +1,127 @@
+{% extends 'panel/base.html' %}
+{% block title %}Guruhlar{% endblock %}
+{% block navbar_title %}Guruhlar Boshqaruvi{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Guruhlar</h1>
+    <p>Bog'chadagi barcha guruhlar ro'yxati</p>
+  </div>
+  <button class="btn btn-primary" onclick="Panel.openModal('addGroupModal')">
+    + Guruh qo'shish
+  </button>
+</div>
+
+<div class="group-grid" id="groupsGrid">
+  <div class="page-loader"><span class="spinner"></span></div>
+</div>
+
+<!-- Modal: Qo'shish -->
+<div class="modal-overlay" id="addGroupModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Yangi guruh qo'shish</h3>
+      <button class="modal-close" onclick="Panel.closeModal('addGroupModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form id="groupForm">
+        <input type="hidden" id="g_id">
+        <div class="form-group">
+          <label class="form-label">Guruh nomi</label>
+          <input type="text" id="g_name" class="form-input" required placeholder="Masalan: Qaldirg'och">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Rasm (ixtiyoriy)</label>
+          <input type="file" id="g_image" class="form-input" accept="image/*">
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="Panel.closeModal('addGroupModal')">Bekor qilish</button>
+      <button class="btn btn-primary" id="saveGroupBtn" onclick="saveGroup()">Saqlash</button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadGroups() {
+  const data = await Panel.apiGet('/api/kindergarden/groups/');
+  const grid = document.getElementById('groupsGrid');
+  if (!data) return;
+
+  if (data.length === 0) {
+    grid.innerHTML = '<div style="grid-column:1/-1;"><div class="empty-state"><div class="empty-state-icon">👥</div><h3>Guruhlar yo\'q</h3><p>Hali hech qanday guruh qo\'shilmagan.</p></div></div>';
+    return;
+  }
+
+  grid.innerHTML = data.map(g => `
+    <div class="group-card fade-in">
+      <div class="group-card-img">
+        ${g.image ? `<img src="${g.image}" alt="${g.name}">` : '🏠'}
+      </div>
+      <div class="group-card-body">
+        <h3><a href="/panel/groups/${g.id}/" style="color:inherit;text-decoration:none;">${g.name}</a></h3>
+        <div class="group-card-meta">
+          <span>👶 ${g.children_count || 0} bola</span>
+          <span>👨‍🏫 ${g.staff_count || 0} xodim</span>
+        </div>
+      </div>
+      <div class="group-card-actions">
+        <a href="/panel/groups/${g.id}/" class="btn btn-primary btn-sm">Ko'rish</a>
+        <button class="btn btn-outline btn-sm" onclick='editGroup(${JSON.stringify(g).replace(/'/g, "&apos;")})'>Tahrirlash</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteGroup('${g.id}', '${g.name}')">O'chirish</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function saveGroup() {
+  const id = document.getElementById('g_id').value;
+  const name = document.getElementById('g_name').value.trim();
+  const file = document.getElementById('g_image').files[0];
+  if (!name) return Panel.toast('Guruh nomini kiriting', 'error');
+
+  const btn = document.getElementById('saveGroupBtn');
+  btn.disabled = true;
+  btn.textContent = 'Saqlanmoqda...';
+
+  const formData = new FormData();
+  formData.append('name', name);
+  if (file) formData.append('image', file);
+
+  const url = id ? `/api/kindergarden/groups/${id}/edit/` : '/api/kindergarden/groups/add/';
+  const res = id ? await Panel.apiPatch(url, formData) : await Panel.apiPost(url, formData);
+  btn.disabled = false;
+  btn.textContent = 'Saqlash';
+
+  if (res && res.ok) {
+    Panel.toast('Guruh muvaffaqiyatli qo\'shildi', 'success');
+    Panel.closeModal('addGroupModal');
+    document.getElementById('groupForm').reset();
+    loadGroups();
+  }
+}
+
+function editGroup(g) {
+  document.getElementById('g_id').value = g.id;
+  document.getElementById('g_name').value = g.name;
+  Panel.openModal('addGroupModal');
+}
+
+async function deleteGroup(id, name) {
+  if (!Panel.confirm(`"${name}" guruhini o'chirmoqchimisiz? Undagi bolalar va xodimlar o'chmaydi.`)) return;
+  const res = await Panel.apiDelete(`/api/kindergarden/groups/${id}/delete/`);
+  if (res && res.ok) {
+    Panel.toast('Guruh o\'chirildi', 'success');
+    loadGroups();
+  }
+}
+
+// Initial load
+loadGroups();
+</script>
+{% endblock %}

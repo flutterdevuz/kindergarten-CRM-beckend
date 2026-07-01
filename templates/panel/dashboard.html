@@ -1,0 +1,133 @@
+{% extends 'panel/base.html' %}
+{% block title %}Dashboard{% endblock %}
+{% block navbar_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Dashboard</h1>
+    <p>Bog'cha statistikasi</p>
+  </div>
+</div>
+
+<!-- Stat Cards -->
+<div class="stat-grid" id="statCards">
+  <div class="stat-card purple">
+    <div class="stat-icon purple">👶</div>
+    <div class="stat-value" id="statChildren">—</div>
+    <div class="stat-label">Bolalar</div>
+  </div>
+  <div class="stat-card blue">
+    <div class="stat-icon blue">👨‍🏫</div>
+    <div class="stat-value" id="statStaff">—</div>
+    <div class="stat-label">Xodimlar</div>
+  </div>
+  <div class="stat-card green">
+    <div class="stat-icon green">👥</div>
+    <div class="stat-value" id="statGroups">—</div>
+    <div class="stat-label">Guruhlar</div>
+  </div>
+  <div class="stat-card orange">
+    <div class="stat-icon orange">📋</div>
+    <div class="stat-value" id="statAttendance">—</div>
+    <div class="stat-label">Bugungi davomat</div>
+  </div>
+</div>
+
+<!-- Attendance Chart -->
+<div style="display:grid;grid-template-columns:2fr 1fr;gap:20px;margin-bottom:24px;" id="chartsRow">
+  <div class="card">
+    <div class="card-header"><h2>📈 So'nggi 7 kun davomat</h2></div>
+    <div class="card-body">
+      <canvas id="attendanceChart" height="200"></canvas>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header"><h2>📊 Guruhlar</h2></div>
+    <div class="card-body" id="groupsList">
+      <div class="page-loader"><span class="spinner"></span></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(async function() {
+  const data = await Panel.apiGet('/api/kindergarden/statistic/');
+  if (!data) return;
+
+  const s = data.summary;
+  document.getElementById('statChildren').textContent = s.total_children;
+  document.getElementById('statStaff').textContent = s.total_staff;
+  document.getElementById('statGroups').textContent = s.total_groups;
+  document.getElementById('statAttendance').textContent = s.today_attendance_percent + '%';
+
+  // Groups list
+  const gl = document.getElementById('groupsList');
+  if (data.groups_chart && data.groups_chart.length) {
+    gl.innerHTML = data.groups_chart.map(g => `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);">
+        <span style="font-size:0.9rem;">${g.group_name}</span>
+        <span class="badge badge-primary">${g.count} bola</span>
+      </div>
+    `).join('');
+  } else {
+    gl.innerHTML = '<div class="empty-state"><p>Guruhlar topilmadi</p></div>';
+  }
+
+  // Simple chart using canvas
+  drawChart(data.attendance_chart);
+})();
+
+function drawChart(chartData) {
+  const canvas = document.getElementById('attendanceChart');
+  if (!canvas || !chartData || !chartData.length) return;
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width = canvas.parentElement.clientWidth - 48;
+  const h = canvas.height = 200;
+  const pad = { top: 20, right: 20, bottom: 40, left: 40 };
+  const cw = w - pad.left - pad.right;
+  const ch = h - pad.top - pad.bottom;
+
+  const maxVal = Math.max(...chartData.map(d => d.present + d.absent + d.sick), 1);
+  const step = cw / (chartData.length - 1 || 1);
+
+  ctx.clearRect(0, 0, w, h);
+
+  // Grid
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.top + ch - (ch / 4) * i;
+    ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(w - pad.right, y); ctx.stroke();
+  }
+
+  // Present line
+  ctx.strokeStyle = '#10b981'; ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  chartData.forEach((d, i) => {
+    const x = pad.left + i * step;
+    const y = pad.top + ch - (d.present / maxVal) * ch;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  // Dots
+  chartData.forEach((d, i) => {
+    const x = pad.left + i * step;
+    const y = pad.top + ch - (d.present / maxVal) * ch;
+    ctx.fillStyle = '#10b981';
+    ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2); ctx.fill();
+  });
+
+  // Labels
+  ctx.fillStyle = '#64748b'; ctx.font = '11px Inter, sans-serif'; ctx.textAlign = 'center';
+  chartData.forEach((d, i) => {
+    const x = pad.left + i * step;
+    const label = d.date.slice(5); // MM-DD
+    ctx.fillText(label, x, h - 8);
+  });
+}
+</script>
+{% endblock %}
